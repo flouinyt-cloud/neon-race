@@ -2,173 +2,192 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>NeonRace | Live</title>
+    <title>NeonRace Marketplace</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --primary: #00e676; --bg: #121212; --card: #1e1e1e; }
-        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 50px; }
-        header { background: #1a1a1a; padding: 15px 5%; display: flex; justify-content: space-between; border-bottom: 2px solid var(--primary); }
-        .btn { background: var(--primary); color: black; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .container { max-width: 1100px; margin: 20px auto; padding: 0 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 50px; }
+        header { background: #1a1a1a; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); position: sticky; top: 0; z-index: 100; }
+        .btn { background: var(--primary); color: black; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn:hover { transform: scale(1.05); }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-        .item-card { background: var(--card); padding: 20px; border-radius: 15px; text-align: center; border: 1px solid #333; }
-        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; border: 2px solid var(--primary); padding: 20px; border-radius: 15px; display: none; z-index: 1000; width: 400px; }
-        #chatBox { height: 200px; overflow-y: auto; background: #111; padding: 10px; display: flex; flex-direction: column; gap: 5px; }
-        .my-msg { align-self: flex-end; background: var(--primary); color: black; padding: 5px 10px; border-radius: 8px; }
-        .other-msg { align-self: flex-start; background: #444; padding: 5px 10px; border-radius: 8px; }
+        .card { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid #333; text-align: center; }
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; border: 2px solid var(--primary); padding: 25px; border-radius: 20px; display: none; z-index: 1000; width: 400px; max-height: 80vh; overflow-y: auto; }
+        #chatBox { height: 250px; overflow-y: auto; background: #111; padding: 10px; border-radius: 10px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+        .msg { padding: 8px 12px; border-radius: 10px; max-width: 80%; }
+        .my { align-self: flex-end; background: var(--primary); color: black; }
+        .other { align-self: flex-start; background: #444; }
         #overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; z-index:999; }
+        input { background: #333; border: 1px solid #444; color: white; padding: 8px; border-radius: 5px; margin: 5px 0; }
     </style>
 </head>
 <body>
 
-<div id="overlay" onclick="closeModals()"></div>
+<div id="overlay" onclick="closeAll()"></div>
 
 <header>
-    <h2 style="color:var(--primary)">NEON RACE</h2>
-    <div id="authBox">
-        <input type="text" id="u" placeholder="Ник"> <input type="password" id="p" placeholder="Пароль">
-        <button class="btn" onclick="auth('login')">Вход</button>
-        <button class="btn" onclick="auth('register')" style="background:#444;color:white">Рег</button>
+    <h2 style="color:var(--primary); margin:0;">NEON RACE</h2>
+    <div id="authPanel">
+        <input type="text" id="uNick" placeholder="Ник">
+        <input type="password" id="uPass" placeholder="Пароль">
+        <button class="btn" onclick="userAuth('login')">Вход</button>
+        <button class="btn" onclick="userAuth('register')" style="background:#444; color:white;">Рег</button>
     </div>
-    <div id="userBox" style="display:none">
-        <b id="username"></b> 
-        <button class="btn" onclick="openModal('profile')">📩</button>
-        <button class="btn" onclick="logout()" style="background:red">Выход</button>
+    <div id="userPanel" style="display:none;">
+        <span id="helloUser"></span>
+        <button class="btn" onclick="openModal('profileModal')"><i class="fas fa-envelope"></i></button>
+        <button class="btn" onclick="logout()" style="background:#ff4444;">Выход</button>
     </div>
 </header>
 
 <div class="container">
-    <div id="sellBox" style="display:none; background:var(--card); padding:20px; border-radius:15px; margin-bottom:20px;">
-        <input type="text" id="iName" placeholder="Товар"> <input type="number" id="iPrice" placeholder="Цена">
-        <button class="btn" onclick="sell()">Выставить</button>
+    <div id="sellForm" style="display:none; background:var(--card); padding:20px; border-radius:15px; margin-bottom:30px; border: 1px dashed var(--primary);">
+        <h3>Выставить товар</h3>
+        <input type="text" id="pName" placeholder="Название предмета">
+        <input type="number" id="pPrice" placeholder="Цена (Robux)">
+        <button class="btn" onclick="createItem()">Опубликовать</button>
     </div>
-    <div class="grid" id="items"></div>
+
+    <div class="grid" id="marketGrid"></div>
 </div>
 
-<div id="profile" class="modal">
-    <h3>Входящие</h3>
-    <div id="inbox"></div>
-    <button class="btn" onclick="closeModals()">Закрыть</button>
+<div id="profileModal" class="modal">
+    <h3>Входящие сообщения</h3>
+    <div id="inboxList"></div>
+    <button class="btn" style="width:100%; margin-top:10px;" onclick="closeAll()">Закрыть</button>
 </div>
 
-<div id="chat" class="modal">
-    <h3 id="chatWith"></h3>
+<div id="chatModal" class="modal">
+    <h3 id="chatTitle">Чат</h3>
     <div id="chatBox"></div>
-    <input type="text" id="mIn" style="width:70%"> <button class="btn" onclick="send()">➤</button>
+    <div style="display:flex; gap:5px;">
+        <input type="text" id="msgText" style="flex:1;" placeholder="Сообщение...">
+        <button class="btn" onclick="sendChatMessage()">➤</button>
+    </div>
 </div>
 
 <script>
-    // ГЛАВНОЕ ИЗМЕНЕНИЕ ТУТ:
     const API = 'https://neon-race.onrender.com/api';
-    let user = localStorage.getItem('user');
-    let chatTarget = null;
+    let currentUser = localStorage.getItem('userName');
+    let activeChat = null;
 
-    async function auth(t) {
-        const u = document.getElementById('u').value, p = document.getElementById('p').value;
-        const res = await fetch(`${API}/${t}`, {
+    async function userAuth(type) {
+        const user = document.getElementById('uNick').value;
+        const pass = document.getElementById('uPass').value;
+        const res = await fetch(`${API}/${type}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({user: u, pass: p})
+            body: JSON.stringify({user, pass})
         });
-        if(res.ok && t === 'login') { localStorage.setItem('user', u); location.reload(); }
-        else if(res.ok) alert("Готово! Войди.");
+        if(res.ok) {
+            if(type === 'login') { localStorage.setItem('userName', user); location.reload(); }
+            else alert("Успешно! Теперь войдите.");
+        } else alert("Ошибка! Проверьте данные.");
     }
 
-    function logout() { localStorage.removeItem('user'); location.reload(); }
+    function logout() { localStorage.removeItem('userName'); location.reload(); }
 
-    async function load() {
+    async function loadItems() {
         const res = await fetch(`${API}/items`);
-        const data = await res.json();
-        document.getElementById('items').innerHTML = data.map(i => `
-            <div class="item-card">
+        const items = await res.json();
+        const grid = document.getElementById('marketGrid');
+        grid.innerHTML = items.map(i => `
+            <div class="card">
                 <h3>${i.name}</h3>
                 <p>Продавец: ${i.seller}</p>
-                <b style="color:var(--primary)">${i.price} Robux</b><br><br>
-                ${i.seller === user || user === 'Admin' ? 
-                    `<button class="btn" style="background:red" onclick="del(${i.id})">Удалить</button>` :
-                    `<button class="btn" onclick="openChat('${i.seller}')">Написать</button>`
+                <div style="color:var(--primary); font-size:1.2em; font-weight:bold;">${i.price} Robux</div><br>
+                ${(i.seller === currentUser || currentUser === 'Admin') ? 
+                    `<button class="btn" style="background:#ff4444; color:white;" onclick="deleteItem(${i.id})">Удалить</button>` :
+                    `<button class="btn" onclick="startChat('${i.seller}')">Написать</button>`
                 }
             </div>
         `).join('');
     }
 
-    async function sell() {
-        const n = document.getElementById('iName').value, p = document.getElementById('iPrice').value;
+    async function createItem() {
+        const name = document.getElementById('pName').value;
+        const price = document.getElementById('pPrice').value;
         await fetch(`${API}/sell`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name: n, price: p, seller: user})
+            body: JSON.stringify({name, price, seller: currentUser})
         });
         location.reload();
     }
 
-    async function del(id) {
+    async function deleteItem(id) {
+        if(!confirm("Удалить предмет?")) return;
         await fetch(`${API}/items/${id}`, {
             method: 'DELETE',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({user: user})
+            body: JSON.stringify({user: currentUser})
         });
-        load();
+        loadItems();
     }
 
-    async function openChat(target) {
-        chatTarget = target;
-        document.getElementById('chatWith').innerText = target;
-        openModal('chat');
-        updateChat();
+    async function startChat(target) {
+        if(!currentUser) return alert("Войдите!");
+        activeChat = target;
+        document.getElementById('chatTitle').innerText = "Чат с " + target;
+        openModal('chatModal');
+        refreshChat();
     }
 
-    async function updateChat() {
-        if(!chatTarget) return;
-        const res = await fetch(`${API}/messages/${user}/${chatTarget}`);
+    async function refreshChat() {
+        if(!activeChat) return;
+        const res = await fetch(`${API}/messages/${currentUser}/${activeChat}`);
         const msgs = await res.json();
-        document.getElementById('chatBox').innerHTML = msgs.map(m => 
-            `<div class="${m.from === user ? 'my-msg' : 'other-msg'}">${m.text}</div>`
-        ).join('');
+        document.getElementById('chatBox').innerHTML = msgs.map(m => `
+            <div class="msg ${m.from === currentUser ? 'my' : 'other'}">${m.text}</div>
+        `).join('');
+        const box = document.getElementById('chatBox');
+        box.scrollTop = box.scrollHeight;
     }
 
-    async function send() {
-        const t = document.getElementById('mIn').value;
+    async function sendChatMessage() {
+        const text = document.getElementById('msgText').value;
+        if(!text) return;
         await fetch(`${API}/messages`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({from: user, to: chatTarget, text: t})
+            body: JSON.stringify({from: currentUser, to: activeChat, text})
         });
-        document.getElementById('mIn').value = '';
-        updateChat();
+        document.getElementById('msgText').value = '';
+        refreshChat();
     }
 
     async function loadInbox() {
-        const res = await fetch(`${API}/my-inbox/${user}`);
+        const res = await fetch(`${API}/my-inbox/${currentUser}`);
         const data = await res.json();
-        document.getElementById('inbox').innerHTML = data.map(m => `
-            <div style="background:#333; padding:5px; margin:5px;">
-                <b>${m.from}:</b> ${m.text} <button onclick="openChat('${m.from}')">Ответить</button>
+        document.getElementById('inboxList').innerHTML = data.reverse().map(m => `
+            <div style="background:#333; padding:10px; margin:5px 0; border-radius:8px;">
+                <b>${m.from}:</b> ${m.text} <br>
+                <button class="btn" style="padding:2px 10px; font-size:12px;" onclick="startChat('${m.from}')">Ответить</button>
             </div>
-        `).join('');
+        `).join('') || "Сообщений нет.";
     }
 
-    function openModal(id) { 
+    function openModal(id) {
         document.getElementById('overlay').style.display = 'block';
         document.getElementById(id).style.display = 'block';
-        if(id === 'profile') loadInbox();
+        if(id === 'profileModal') loadInbox();
     }
 
-    function closeModals() {
+    function closeAll() {
+        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
         document.getElementById('overlay').style.display = 'none';
-        document.getElementById('profile').style.display = 'none';
-        document.getElementById('chat').style.display = 'none';
-        chatTarget = null;
+        activeChat = null;
     }
 
-    if(user) {
-        document.getElementById('authBox').style.display = 'none';
-        document.getElementById('userBox').style.display = 'block';
-        document.getElementById('username').innerText = user;
-        document.getElementById('sellBox').style.display = 'block';
+    if(currentUser) {
+        document.getElementById('authPanel').style.display = 'none';
+        document.getElementById('userPanel').style.display = 'block';
+        document.getElementById('helloUser').innerText = currentUser;
+        document.getElementById('sellForm').style.display = 'block';
     }
-    load();
-    setInterval(updateChat, 3000);
+    loadItems();
+    setInterval(() => { if(activeChat) refreshChat() }, 3000);
 </script>
 </body>
 </html>
