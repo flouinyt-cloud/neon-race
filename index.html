@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeonRace | Roblox Market</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #00e676;
+            --bg: #121212;
+            --card: #1e1e1e;
+            --text: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding-bottom: 50px;
+        }
+
+        header {
+            background: #1a1a1a;
+            padding: 15px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--primary);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo { font-size: 24px; font-weight: bold; color: var(--primary); text-decoration: none; }
+
+        .auth-inputs input {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            margin-right: 5px;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: black;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn:hover { transform: scale(1.05); opacity: 0.9; }
+        .btn-red { background: #ff4444; color: white; }
+
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+
+        .sell-box {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 1px dashed var(--primary);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 25px;
+        }
+
+        .item-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid #333;
+        }
+
+        .item-card img { width: 100px; height: 100px; object-fit: contain; }
+        .price { font-size: 1.5em; color: var(--primary); font-weight: bold; margin: 10px 0; }
+        .price img { width: 20px; vertical-align: middle; }
+
+        /* Модальные окна */
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #222;
+            border: 2px solid var(--primary);
+            padding: 25px;
+            border-radius: 20px;
+            display: none;
+            z-index: 1000;
+            width: 90%;
+            max-width: 450px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        
+        .inbox-msg {
+            background: #2a2a2a;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--primary);
+        }
+
+        #chatBox { height: 250px; overflow-y: auto; background: #111; padding: 10px; border-radius: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .bubble { padding: 8px 12px; border-radius: 10px; max-width: 80%; }
+        .my-msg { align-self: flex-end; background: var(--primary); color: black; }
+        .other-msg { align-self: flex-start; background: #444; }
+
+        #overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; z-index:999; }
+    </style>
+</head>
+<body>
+
+<div id="overlay" onclick="closeAllModals()"></div>
+
+<header>
+    <a href="#" class="logo">NEON RACE</a>
+    
+    <div id="authSection" class="auth-inputs">
+        <input type="text" id="logUser" placeholder="Никнейм">
+        <input type="password" id="logPass" placeholder="Пароль">
+        <button class="btn" onclick="auth('login')">Вход</button>
+        <button class="btn" style="background:#444; color:white;" onclick="auth('register')">Регистрация</button>
+    </div>
+
+    <div id="userSection" style="display: none;">
+        <span><i class="fas fa-user"></i> <b id="displayUser"></b></span>
+        <button class="btn" onclick="openModal('profileModal')">Сообщения</button>
+        <button class="btn btn-red" onclick="logout()">Выход</button>
+    </div>
+</header>
+
+<div class="container">
+    <div id="sellSection" class="sell-box" style="display: none;">
+        <h3>Выставить предмет</h3>
+        <input type="text" id="itemName" placeholder="Название" style="padding:8px;">
+        <input type="number" id="itemPrice" placeholder="Цена" style="padding:8px;">
+        <button class="btn" onclick="publishItem()">Выставить</button>
+    </div>
+
+    <h2>Витрина предметов</h2>
+    <div class="grid" id="marketGrid"></div>
+</div>
+
+<div id="profileModal" class="modal">
+    <div class="modal-header">
+        <h3>Входящие сообщения</h3>
+        <span style="cursor:pointer" onclick="closeAllModals()">&times;</span>
+    </div>
+    <div id="inboxContent"></div>
+</div>
+
+<div id="chatModal" class="modal">
+    <div class="modal-header">
+        <h3 id="chatPartnerName">Чат</h3>
+        <span style="cursor:pointer" onclick="closeAllModals()">&times;</span>
+    </div>
+    <div id="chatBox"></div>
+    <div style="display:flex; gap:5px; margin-top:10px;">
+        <input type="text" id="msgInput" style="flex:1; padding:10px; border-radius:5px; border:none; background:#333; color:white;">
+        <button class="btn" onclick="sendMessage()">➤</button>
+    </div>
+</div>
+
+<script>
+    const API_URL = 'http://localhost:3000/api';
+    const ADMIN_NICK = 'Admin'; // Твой ник для удаления всего
+    let currentUser = localStorage.getItem('userName');
+    let activeChatUser = null;
+
+    // --- АВТОРИЗАЦИЯ ---
+    async function auth(type) {
+        const user = document.getElementById('logUser').value;
+        const pass = document.getElementById('logPass').value;
+        const res = await fetch(`${API_URL}/${type}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ user, pass })
+        });
+        if(res.ok) {
+            if(type === 'login') {
+                localStorage.setItem('userName', user);
+                location.reload();
+            } else alert("Успех! Теперь войдите.");
+        } else {
+            const data = await res.json();
+            alert(data.error);
+        }
+    }
+
+    function logout() { localStorage.removeItem('userName'); location.reload(); }
+
+    // --- ТОВАРЫ ---
+    async function loadItems() {
+        const res = await fetch(`${API_URL}/items`);
+        const items = await res.json();
+        const grid = document.getElementById('marketGrid');
+        grid.innerHTML = '';
+        
+        items.forEach(item => {
+            const isOwner = (currentUser === item.seller);
+            const isAdmin = (currentUser === ADMIN_NICK);
+
+            grid.innerHTML += `
+                <div class="item-card">
+                    <img src="https://tr.rbxcdn.com/180DAY-4e3549641775f0a0e980556e87702f37/420/420/Hat/Webp">
+                    <h3>${item.name}</h3>
+                    <p>Продавец: <b>${item.seller}</b></p>
+                    <div class="price">${item.price} <img src="https://upload.wikimedia.org/wikipedia/commons/c/c7/Robux_2019_Logo_gold.svg"></div>
+                    ${(isOwner || isAdmin) ? 
+                        `<button class="btn btn-red" onclick="deleteItem(${item.id})">Удалить ${isAdmin && !isOwner ? '(Админ)' : ''}</button>` : 
+                        `<button class="btn" onclick="openChat('${item.seller}')">Написать</button>`
+                    }
+                </div>
+            `;
+        });
+    }
+
+    async function publishItem() {
+        const name = document.getElementById('itemName').value;
+        const price = document.getElementById('itemPrice').value;
+        await fetch(`${API_URL}/sell`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name, price, seller: currentUser })
+        });
+        location.reload();
+    }
+
+    async function deleteItem(id) {
+        if(!confirm("Удалить?")) return;
+        await fetch(`${API_URL}/items/${id}`, {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ user: currentUser })
+        });
+        loadItems();
+    }
+
+    // --- СООБЩЕНИЯ ---
+    async function loadInbox() {
+        const res = await fetch(`${API_URL}/my-inbox/${currentUser}`);
+        const msgs = await res.json();
+        const cont = document.getElementById('inboxContent');
+        cont.innerHTML = msgs.length ? msgs.reverse().map(m => `
+            <div class="inbox-msg">
+                <b>От: ${m.from}</b> <br> ${m.text} <br>
+                <button class="btn" style="padding:3px; font-size:10px" onclick="openChat('${m.from}')">Ответить</button>
+            </div>
+        `).join('') : "Нет сообщений.";
+    }
+
+    async function openChat(name) {
+        if(!currentUser) return alert("Войдите!");
+        activeChatUser = name;
+        document.getElementById('chatPartnerName').innerText = "Чат с " + name;
+        openModal('chatModal');
+        loadMessages();
+    }
+
+    async function loadMessages() {
+        if(!activeChatUser) return;
+        const res = await fetch(`${API_URL}/messages/${currentUser}/${activeChatUser}`);
+        const msgs = await res.json();
+        const box = document.getElementById('chatBox');
+        box.innerHTML = msgs.map(m => `<div class="bubble ${m.from === currentUser ? 'my-msg' : 'other-msg'}">${m.text}</div>`).join('');
+        box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendMessage() {
+        const text = document.getElementById('msgInput').value;
+        if(!text) return;
+        await fetch(`${API_URL}/messages`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ from: currentUser, to: activeChatUser, text })
+        });
+        document.getElementById('msgInput').value = '';
+        loadMessages();
+    }
+
+    function openModal(id) {
+        document.getElementById('overlay').style.display = 'block';
+        document.getElementById(id).style.display = 'block';
+        if(id === 'profileModal') loadInbox();
+    }
+
+    function closeAllModals() {
+        document.getElementById('overlay').style.display = 'none';
+        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        activeChatUser = null;
+    }
+
+    if(currentUser) {
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('userSection').style.display = 'flex';
+        document.getElementById('displayUser').innerText = currentUser;
+        document.getElementById('sellSection').style.display = 'block';
+    }
+    loadItems();
+    setInterval(() => { if(activeChatUser) loadMessages() }, 3000);
+</script>
+</body>
+</html>
