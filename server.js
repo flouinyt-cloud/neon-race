@@ -13,7 +13,6 @@ const CHATS_FILE = './chats.json';
 const read = (f) => fs.existsSync(f) ? JSON.parse(fs.readFileSync(f)) : [];
 const write = (f, d) => fs.writeFileSync(f, JSON.stringify(d, null, 2));
 
-// Твой ник для полного доступа
 const ADMIN_NICKNAME = 'Admin';
 
 // --- АВТОРИЗАЦИЯ ---
@@ -37,12 +36,7 @@ app.get('/api/items', (req, res) => res.json(read(ITEMS_FILE)));
 
 app.post('/api/sell', (req, res) => {
     const items = read(ITEMS_FILE);
-    const newItem = {
-        id: Date.now(), // Уникальный ID для удаления
-        name: req.body.name,
-        price: req.body.price,
-        seller: req.body.seller
-    };
+    const newItem = { id: Date.now(), ...req.body };
     items.push(newItem);
     write(ITEMS_FILE, items);
     res.json({ok: true});
@@ -58,7 +52,7 @@ app.delete('/api/items/:id', (req, res) => {
         write(ITEMS_FILE, items);
         res.json({ok: true});
     } else {
-        res.status(403).json({error: "Нет прав на удаление!"});
+        res.status(403).json({error: "Нет прав!"});
     }
 });
 
@@ -84,4 +78,6 @@ app.post('/api/messages', (req, res) => {
     res.json({ok: true});
 });
 
-app.listen(3000, () => console.log("Сервер запущен на порту 3000"));
+// ВАЖНО: Порт для Render
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
